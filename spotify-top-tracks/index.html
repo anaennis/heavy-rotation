@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Heavy Rotation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Fraunces:wght@400;700&family=Big+Shoulders+Display:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <nav class="nav" aria-label="Versions">
+        <a href="index.html" aria-current="page">Upload your history</a>
+        <a href="api.html">Log in with Spotify</a>
+      </nav>
+      <h1>Heavy<br>Rotation</h1>
+      <p class="lede">Turn your Spotify listening history into a shareable image of your most played tracks, artists or albums.</p>
+      <ul class="stickers" aria-label="What you can make"><li class="sticker">Top tracks</li><li class="sticker">Top artists</li><li class="sticker">Top albums</li></ul>
+    </div>
+    <div class="record-wrap" aria-hidden="true">
+      <svg class="record" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="98" fill="#0d0b16"/>
+        <g fill="none" stroke="#ffffff" stroke-opacity=".11" stroke-width="1.4">
+          <circle cx="100" cy="100" r="91"/><circle cx="100" cy="100" r="84"/><circle cx="100" cy="100" r="77"/>
+          <circle cx="100" cy="100" r="70"/><circle cx="100" cy="100" r="63"/><circle cx="100" cy="100" r="56"/><circle cx="100" cy="100" r="49"/>
+        </g>
+        <circle cx="100" cy="100" r="38" fill="#ff5c8a"/>
+        <circle cx="100" cy="100" r="38" fill="none" stroke="#17102b" stroke-width="3"/>
+        <circle cx="100" cy="76" r="6" fill="#ffd23f"/>
+        <circle cx="100" cy="100" r="5" fill="#0d0b16"/>
+      </svg>
+    </div>
+  </div>
+</header>
+<main>
+
+  <section class="block sleeve" aria-labelledby="h-load">
+    <h2 id="h-load"><span class="num">1</span>Add your history</h2>
+    <label class="drop" id="drop">
+      <svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="96" fill="#17102b"/><circle cx="100" cy="100" r="62" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3"/><circle cx="100" cy="100" r="38" fill="#ff5c8a"/><circle cx="100" cy="78" r="7" fill="#ffd23f"/><circle cx="100" cy="100" r="5" fill="#17102b"/></svg>
+      <strong>Choose your Spotify zip</strong>
+      <span>or drop it here. The unzipped JSON files work too.</span>
+      <input id="file" type="file" multiple accept=".zip,.json,application/zip,application/json">
+    </label>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <button class="linkbtn" id="sample" type="button">Try it with sample data</button>
+    <details open>
+      <summary>How to get your file from Spotify</summary>
+      <ol>
+        <li>Open <a href="https://www.spotify.com/account/privacy" target="_blank" rel="noopener">spotify.com/account/privacy</a> in a browser and sign in. This works on a phone too, but not inside the Spotify app.</li>
+        <li>Scroll to <b>Download your data</b> and tick <b>Extended streaming history</b>. The basic “Account data” only covers about a year and has no album names.</li>
+        <li>Click <b>Request data</b>, then open the email Spotify sends you and confirm. Nothing starts until you do.</li>
+        <li>Wait for a second email with your download link. Spotify says up to 30 days, but it often arrives within a few days.</li>
+        <li>Download the zip and drop it above. Don’t unzip it. The link only works for a limited time, so download it soon after the email arrives.</li>
+      </ol>
+    </details>
+    <p class="note" style="margin-top:14px">Your file is read inside this browser tab and is never uploaded. Only the track, artist, time and play length are used. The IP addresses in the export are ignored.</p>
+  </section>
+
+  <div id="app" hidden>
+    <section class="block" id="filters" aria-labelledby="h-filter">
+      <h2 id="h-filter"><span class="num">2</span>Pick the plays to count</h2>
+      <div class="field">
+        <label for="month">Month</label>
+        <select id="month"></select>
+      </div>
+      <div class="field">
+        <span class="lab">Hours of the day</span>
+        <div class="chips" id="presets">
+          <button type="button" class="chip" data-s="0" data-e="24">All day</button>
+          <button type="button" class="chip" data-s="8" data-e="18">Daytime</button>
+          <button type="button" class="chip" data-s="5" data-e="12">Morning</button>
+          <button type="button" class="chip" data-s="18" data-e="24">Evening</button>
+        </div>
+        <div class="row2">
+          <div class="field" style="margin:0"><label for="hStart">From</label><select id="hStart"></select></div>
+          <div class="field" style="margin:0"><label for="hEnd">Until</label><select id="hEnd"></select></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="tz">Time zone for those hours</label>
+        <select id="tz"></select>
+      </div>
+      <div class="field">
+        <label for="kind">Show</label>
+        <select id="kind"><option value="tracks">Top tracks</option><option value="artists">Top artists</option><option value="albums">Top albums</option></select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="by">Rank by</label>
+          <select id="by"><option value="plays">Plays</option><option value="time">Time listened</option></select>
+        </div>
+        <div class="field">
+          <label for="minlen">Count a play after</label>
+          <select id="minlen"><option value="0">Any length</option><option value="30000" selected>30 seconds</option><option value="60000">1 minute</option></select>
+        </div>
+      </div>
+      <p class="summary" id="summary" role="status" aria-live="polite"></p>
+    </section>
+    <!-- card.js adds the image preview and customize sections here -->
+  </div>
+</main>
+
+<script src="card.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ---------- data store ---------- */
+const S = {sample:false, map:new Map(), tracks:[], amap:new Map(), albums:[], t:[], ms:[], id:[], alb:[], rows:[]};
+function resetData(){ S.sample = false; S.map = new Map(); S.tracks = []; S.amap = new Map(); S.albums = []; S.t = []; S.ms = []; S.id = []; S.alb = []; S.rows = []; }
+function addPlay(name, artist, album, uri, t, ms){
+  const key = name + "\u0001" + artist;
+  let id = S.map.get(key);
+  if(id === undefined){ id = S.tracks.length; S.tracks.push({name, artist, uri}); S.map.set(key, id); }
+  else if(!S.tracks[id].uri && uri) S.tracks[id].uri = uri;
+  let aid = -1;                                      // -1 means the file has no album name for this play
+  if(album){
+    const ak = album + "\u0001" + artist;
+    aid = S.amap.get(ak);
+    if(aid === undefined){ aid = S.albums.length; S.albums.push({name:album, artist, uri}); S.amap.set(ak, aid); }
+    else if(!S.albums[aid].uri && uri) S.albums[aid].uri = uri;
+  }
+  S.t.push(t); S.ms.push(ms); S.id.push(id); S.alb.push(aid);
+}
+function ingest(arr){
+  let added = 0;
+  if(!Array.isArray(arr)) return 0;
+  for(const r of arr){
+    if(!r || typeof r !== "object") continue;
+    let name, artist, album = "", uri = "", t, ms;
+    if("master_metadata_track_name" in r){            // Extended streaming history
+      name = r.master_metadata_track_name; artist = r.master_metadata_album_artist_name || "";
+      album = r.master_metadata_album_album_name || "";
+      uri = /^spotify:track:\w+$/.test(r.spotify_track_uri || "") ? r.spotify_track_uri : "";
+      t = Date.parse(r.ts); ms = r.ms_played;
+    } else if("trackName" in r){                       // older account-data format
+      name = r.trackName; artist = r.artistName || "";
+      let e = String(r.endTime || "").replace(" ", "T");
+      if(e.length === 16) e += ":00";
+      t = Date.parse(e + "Z"); ms = r.msPlayed;
+    } else continue;
+    if(!name || !isFinite(t) || !(ms >= 0)) continue;  // skips podcasts and bad rows
+    addPlay(name, artist, album, uri, t, ms); added++;
+  }
+  return added;
+}
+
+async function readFiles(files){
+  const status = $("status");
+  status.className = "status"; status.textContent = "Reading your file…";
+  resetData();
+  let used = 0;
+  try{
+    for(const f of files){
+      if(/\.zip$/i.test(f.name)){
+        if(typeof JSZip === "undefined") throw new Error("Zip files can’t be opened here. Unzip it first and choose the Streaming_History_Audio JSON files.");
+        const zip = await JSZip.loadAsync(f);
+        for(const name of Object.keys(zip.files)){
+          const e = zip.files[name];
+          if(e.dir || /__MACOSX/.test(name)) continue;
+          if(/streaming_?history[^\/]*\.json$/i.test(name) && !/video/i.test(name)){
+            ingest(JSON.parse(await e.async("string"))); used++;
+          }
+        }
+      } else if(/\.json$/i.test(f.name)){
+        if(/video/i.test(f.name)) continue;
+        ingest(JSON.parse(await f.text())); used++;
+      }
+    }
+  }catch(err){
+    status.className = "status err"; status.textContent = err.message || "That file couldn’t be read.";
+    return;
+  }
+  if(!S.t.length){
+    status.className = "status err";
+    status.textContent = "No music plays found. Look for files named Streaming_History_Audio… in the Extended streaming history export.";
+    return;
+  }
+  let lo = Infinity, hi = -Infinity;
+  for(const t of S.t){ if(t<lo) lo=t; if(t>hi) hi=t; }
+  const fmt = t => new Date(t).toLocaleString("en-US",{month:"short",year:"numeric",timeZone:"UTC"});
+  status.textContent = `Loaded ${S.t.length.toLocaleString()} plays from ${used} file${used===1?"":"s"}, ${fmt(lo)} to ${fmt(hi)}.`;
+  start();
+}
+
+/* ---------- time handling ---------- */
+let fc = {tz:null, fmt:null, map:new Map()};
+function localParts(t, tz){
+  if(fc.tz !== tz){
+    fc = {tz, fmt:new Intl.DateTimeFormat("en-CA",{timeZone:tz,hourCycle:"h23",year:"numeric",month:"2-digit",hour:"2-digit"}), map:new Map()};
+  }
+  const b = Math.floor(t / 900000);
+  let v = fc.map.get(b);
+  if(!v){
+    let y="", m="", h=0;
+    for(const p of fc.fmt.formatToParts(new Date(b*900000))){
+      if(p.type==="year") y=p.value; else if(p.type==="month") m=p.value; else if(p.type==="hour") h=(+p.value)%24;
+    }
+    v = {ym:y+"-"+m, h}; fc.map.set(b, v);
+  }
+  return v;
+}
+const monthLabel = ym => {
+  const [y,m] = ym.split("-").map(Number);
+  return new Date(Date.UTC(y, m-1, 15)).toLocaleString("en-US",{month:"long",year:"numeric",timeZone:"UTC"});
+};
+const hourLabel = h => h===24 ? "midnight" : h===0 ? "12 am" : h<12 ? h+" am" : h===12 ? "12 pm" : (h-12)+" pm";
+
+/* ---------- filtering ---------- */
+function refreshMonths(){
+  const tz = $("tz").value, minMs = +$("minlen").value;
+  const set = new Set();
+  for(let i=0;i<S.t.length;i++){ if(S.ms[i] >= minMs) set.add(localParts(S.t[i], tz).ym); }
+  const months = [...set].sort().reverse();
+  const sel = $("month"), prev = sel.value;
+  sel.innerHTML = "";
+  sel.add(new Option("All time", "all"));
+  for(const m of months) sel.add(new Option(monthLabel(m), m));
+  sel.value = (prev && (prev==="all" || set.has(prev))) ? prev : (months[0] || "all");
+}
+function compute(){
+  const tz = $("tz").value, minMs = +$("minlen").value, month = $("month").value, by = $("by").value, kind = $("kind").value;
+  const s = +$("hStart").value, e = +$("hEnd").value;
+  const inWin = h => s < e ? (h >= s && h < e) : (h >= s || h < e);
+  const agg = new Map(); let matched = 0;
+  for(let i=0;i<S.t.length;i++){
+    const ms = S.ms[i]; if(ms < minMs) continue;
+    const p = localParts(S.t[i], tz);
+    if(month !== "all" && p.ym !== month) continue;
+    if(!inWin(p.h)) continue;
+    const key = kind === "tracks" ? S.id[i] : kind === "artists" ? S.tracks[S.id[i]].artist : S.alb[i];
+    if(key === "" || key === -1) continue;           // no artist or album name on this play
+    matched++;
+    let r = agg.get(key);
+    if(!r){ r = {n:0, ms:0, key}; agg.set(key, r); }
+    r.n++; r.ms += ms;
+  }
+  const rows = [...agg.values()].map(r => {
+    if(kind === "tracks") return {name:S.tracks[r.key].name, artist:S.tracks[r.key].artist, uri:S.tracks[r.key].uri, n:r.n, ms:r.ms};
+    if(kind === "artists") return {name:r.key, artist:null, uri:"", n:r.n, ms:r.ms};
+    return {name:S.albums[r.key].name, artist:S.albums[r.key].artist, uri:S.albums[r.key].uri, n:r.n, ms:r.ms};
+  });
+  rows.sort(by==="plays" ? (a,b)=>(b.n-a.n)||(b.ms-a.ms) : (a,b)=>(b.ms-a.ms)||(b.n-a.n));
+  S.rows = rows;
+  $("summary").textContent = matched > 0
+    ? `${matched.toLocaleString()} plays match, across ${rows.length.toLocaleString()} different ${kind}.`
+    : (kind === "albums" && !S.albums.length)
+      ? "This file doesn’t include album names. The Extended streaming history export does."
+      : "No plays match these filters. Try a wider time window or another month.";
+  Card.setRows(rows, by === "plays" ? "plays" : "time", {hasSub: kind !== "artists", noun: kind});
+  loadCovers(rows, kind);
+}
+
+/* ---------- cover art: best effort via Spotify's public oEmbed lookup ---------- */
+const cover = {cache:new Map(), blocked:false, token:0};
+async function loadCovers(rows, kind){
+  const my = ++cover.token;
+  if(!Card.artOn() || !rows.length){ Card.setNote(""); return; }
+  const want = rows.slice(0, 20).filter(r => r.uri);
+  if(!want.length){
+    Card.setNote(S.sample ? "Sample data uses generated art." : kind === "artists" ? "The export has no artist photos, so artists get generated art." : "This file has no track links, so generated art is shown.");
+    return;
+  }
+  const todo = [];
+  for(const r of want){
+    if(cover.cache.has(r.uri)){ const v = cover.cache.get(r.uri); if(v) r.img = v; } else todo.push(r);
+  }
+  Card.schedule();
+  if(cover.blocked){ coverNote(); return; }
+  if(!todo.length){ Card.setNote(""); return; }
+  Card.setNote("Looking up covers…");
+  let i = 0;
+  const worker = async () => {
+    while(i < todo.length && !cover.blocked && my === cover.token){
+      const r = todo[i++], [, type, id] = r.uri.split(":");
+      try{
+        const res = await fetch("https://open.spotify.com/oembed?url=" + encodeURIComponent(`https://open.spotify.com/${type}/${id}`));
+        if(!res.ok) throw new Error("http " + res.status);
+        const j = await res.json(), u = j.thumbnail_url || null;
+        cover.cache.set(r.uri, u);
+        if(u){ r.img = u; Card.schedule(); }
+      }catch(e){
+        if(e instanceof TypeError) cover.blocked = true;   // blocked by the browser (CORS or no network)
+        else cover.cache.set(r.uri, null);
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  if(my !== cover.token) return;
+  if(cover.blocked) coverNote(); else Card.setNote("");
+}
+function coverNote(){
+  Card.setNote(window.claude
+    ? "Real covers can’t load inside Claude, so generated art is shown. They may load on your own hosted copy."
+    : "Spotify didn’t let this page fetch covers, so generated art is shown instead.");
+}
+function autoSubtitle(){
+  const m = $("month").value, s = +$("hStart").value, e = +$("hEnd").value;
+  const parts = [m === "all" ? "All time" : monthLabel(m)];
+  if(!(s===0 && e===24)) parts.push(`${hourLabel(s)} to ${hourLabel(e)}`);
+  if($("by").value === "time") parts.push("by time listened");
+  return parts.join(", ");
+}
+function syncPresets(){
+  const s = $("hStart").value, e = $("hEnd").value;
+  document.querySelectorAll("#presets .chip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s===s && b.dataset.e===e)));
+}
+
+/* ---------- controls ---------- */
+function buildSelects(){
+  const hs = $("hStart"), he = $("hEnd");
+  for(let h=0; h<24; h++) hs.add(new Option(hourLabel(h), h));
+  for(let h=1; h<=24; h++) he.add(new Option(hourLabel(h), h));
+  hs.value = "0"; he.value = "24";
+  let zones = [];
+  try{ zones = Intl.supportedValuesOf("timeZone"); }catch(e){}
+  const mine = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  if(!zones.length) zones = ["America/Los_Angeles","America/Denver","America/Chicago","America/New_York","America/Argentina/Buenos_Aires","Europe/London","Europe/Paris","Asia/Kolkata","Asia/Tokyo","Australia/Sydney"];
+  if(!zones.includes(mine)) zones.push(mine);
+  if(!zones.includes("UTC")) zones.unshift("UTC");
+  for(const z of zones) $("tz").add(new Option(z.replace(/_/g," "), z));
+  $("tz").value = mine;
+}
+function afterFilterChange(){ compute(); syncPresets(); }
+function wire(){
+  for(const id of ["month","hStart","hEnd","by","kind"]) $(id).onchange = afterFilterChange;
+  $("showArt").addEventListener("change", () => loadCovers(S.rows, $("kind").value));
+  $("tz").onchange = () => { refreshMonths(); afterFilterChange(); };
+  $("minlen").onchange = () => { refreshMonths(); afterFilterChange(); };
+  document.querySelectorAll("#presets .chip").forEach(b => b.onclick = () => {
+    $("hStart").value = b.dataset.s; $("hEnd").value = b.dataset.e; afterFilterChange();
+  });
+  const drop = $("drop");
+  $("file").onchange = e => { if(e.target.files.length) readFiles([...e.target.files]); e.target.value = ""; };
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => { if(e.dataTransfer && e.dataTransfer.files.length) readFiles([...e.dataTransfer.files]); });
+  $("sample").onclick = loadSample;
+}
+function start(){
+  $("app").hidden = false;
+  refreshMonths(); compute(); syncPresets();
+  $("app").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ---------- sample data (made up) ---------- */
+function loadSample(){
+  resetData(); S.sample = true;
+  const songs = [
+    ["Paper Lanterns","Moth & Meridian"],["Slow Orbit","Halcyon Row"],["Salt Flats at Noon","The Quiet Hours"],
+    ["Glass Harbor","Ivy Ketterman"],["Backroads","Dune Parade"],["Static Bloom","Nova Pines"],
+    ["Midweek Sun","Lowtide Club"],["Copper Wire","Moth & Meridian"],["Small Hours","Halcyon Row"],
+    ["Neon Orchard","Pale Cartographers"],["Daylight Savings","The Quiet Hours"],["Open Windows","Ivy Ketterman"],
+    ["Tin Roof","Dune Parade"],["Gravity Well","Nova Pines"],["Sidewalk Chalk","Lowtide Club"],
+    ["Hollow Bell","Pale Cartographers"],["Fieldwork","Moth & Meridian"],["Long Exposure","Halcyon Row"],
+    ["Cedar & Smoke","The Quiet Hours"],["Spare Change","Ivy Ketterman"],["Cold Brew","Dune Parade"],
+    ["Parallax","Nova Pines"],["Morning Static","Lowtide Club"],["Lantern Song","Pale Cartographers"]
+  ];
+  let seed = 7;
+  const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed>>>15, 1|seed); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; };
+  const now = Date.now();
+  for(let d = 0; d < 100; d++){
+    const plays = 8 + Math.floor(rnd()*26);
+    for(let j = 0; j < plays; j++){
+      const idx = Math.floor(Math.pow(rnd(), 2.2) * songs.length);
+      const hr = rnd() < .7 ? 8 + rnd()*10 : rnd()*24;
+      const t = now - d*86400000 - (24 - hr)*3600000;
+      const ms = rnd() < .12 ? 5000 + rnd()*20000 : 120000 + rnd()*120000;
+      addPlay(songs[idx][0], songs[idx][1], songs[idx][1] + (idx % 2 ? " Vol. 2" : " Vol. 1"), "", Math.floor(t), Math.floor(ms));
+    }
+  }
+  $("status").className = "status";
+  $("status").textContent = "Showing made-up sample data. Add your own file above to replace it.";
+  start();
+}
+
+/* ---------- init ---------- */
+Card.getSubtitle = autoSubtitle;
+Card.filename = () => `top-${$("kind").value}-${$("month").value === "all" ? "all-time" : $("month").value}`;
+buildSelects();
+Card.mount($("app"));
+wire();
+</script>
+</body>
+</html>
