@@ -95,6 +95,18 @@ function spotGeo(size){                              // the big #1 block of the 
   if(SIZES[size].h > 1500){ const S = 640; return {stacked:true, S, heroH:S + 24 + 190 + 36}; }
   const S = SIZES[size].h > 1100 ? 400 : 300; return {stacked:false, S, heroH:S + 36};
 }
+// Shrinks the font (down to minK of its size) so long text fits; only adds "…" if it still doesn't fit at the smallest size.
+function fitShrink(c, text, maxW, size, weight, css, minK){
+  let s = size;
+  c.font = `${weight} ${s}px ${css}`;
+  const w = c.measureText(text).width;
+  if(w <= maxW) return text;
+  const floor = size * minK;
+  s = Math.max(floor, size * maxW / w);
+  c.font = `${weight} ${s}px ${css}`;
+  while(s > floor && c.measureText(text).width > maxW){ s -= 1; c.font = `${weight} ${s}px ${css}`; }
+  return fit(c, text, maxW);
+}
 function maxRows(size, artist, layout){
   const avail = SIZES[size].h - LIST_TOP - PAD;
   if(layout === "spotlight") return 1 + Math.max(0, Math.floor((avail - spotGeo(size).heroH) / minRow(artist)));
@@ -305,11 +317,11 @@ function drawRow(c, o, F, th, m, r, rank, yTop, rowH, divider){
   if(o.art) drawArt(c, r, PAD + m.rankW, cy - m.artS/2, m.artS, o.shape);
   const x = PAD + m.rankW + (o.art ? m.artS + 24 : 0), maxW = W - PAD - x - cw - (cw ? 28 : 0);
   c.textAlign = "left"; c.textBaseline = "middle"; c.font = `700 ${t}px ${F.css}`; c.fillStyle = th.text;
-  c.fillText(fit(c, r.name, maxW), x, ty);
+  c.fillText(fitShrink(c, r.name, maxW, t, 700, F.css, .6), x, ty);
   if(o.artist){
-    c.font = `400 ${m.aSize}px ${F.css}`; c.fillStyle = th.sub;
+    c.fillStyle = th.sub;
     const ay = m.tall ? ty + nameH/2 + artH/2 : cy + t*.58;
-    c.fillText(fit(c, r.artist || "Unknown artist", W - PAD - x), x, ay);
+    c.fillText(fitShrink(c, r.artist || "Unknown artist", W - PAD - x, m.aSize, 400, F.css, .7), x, ay);
   }
   if(cntH){
     c.font = `700 ${t*.8}px ${F.css}`; c.fillStyle = o.accent;
@@ -332,23 +344,28 @@ function drawHero(c, o, F, th, k, r, y0){
     drawArt(c, r, ax, ay, S, o.shape);
     c.textAlign = "center";
     let yy = ay + S + 24;
-    c.font = `700 ${66*k}px ${F.css}`; c.fillStyle = th.text;
-    c.fillText(fit(c, r.name, W - PAD*2), W/2, yy + 36); yy += 76;
-    if(o.artist){ c.font = `400 ${38*k}px ${F.css}`; c.fillStyle = th.sub; c.fillText(fit(c, r.artist || "Unknown artist", W - PAD*2), W/2, yy + 20); yy += 52; }
+    c.fillStyle = th.text;
+    c.fillText(fitShrink(c, r.name, W - PAD*2, 66*k, 700, F.css, .55), W/2, yy + 36); yy += 76;
+    if(o.artist){ c.fillStyle = th.sub; c.fillText(fitShrink(c, r.artist || "Unknown artist", W - PAD*2, 38*k, 400, F.css, .7), W/2, yy + 20); yy += 52; }
     if(ct){ c.font = `700 ${46*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, W/2, yy + 24); }
   } else {
     const ax = PAD, ay = y0;
     if(peek) drawVinyl(c, o, ax + S/2 + peek, ay + S/2, S/2);
     drawArt(c, r, ax, ay, S, o.shape);
     const x = ax + S + peek + 40, maxW = W - PAD - x;
-    c.textAlign = "left"; c.font = `700 ${54*k}px ${F.css}`;
-    const lines = wrapLines(c, r.name, maxW, 2);
-    const hh = 44 + lines.length * 62 + (o.artist ? 46 : 0) + (ct ? 60 : 0);
+    c.textAlign = "left";
+    let hs = 54 * k, lines;
+    for(;;){                                         // shrink until the name fits on two lines without cutting words
+      c.font = `700 ${hs}px ${F.css}`; lines = wrapLines(c, r.name, maxW, 2);
+      if(!lines.some(l => l.endsWith("…")) || hs <= 54 * k * .6) break;
+      hs -= 2;
+    }
+    const lh = hs * 1.15, hh = 44 + lines.length * lh + (o.artist ? 46 : 0) + (ct ? 60 : 0);
     let yy = ay + (S - hh) / 2;
     c.font = `700 ${34*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText("#1", x, yy + 17); yy += 44;
-    c.font = `700 ${54*k}px ${F.css}`; c.fillStyle = th.text;
-    for(const l of lines){ c.fillText(l, x, yy + 31); yy += 62; }
-    if(o.artist){ c.font = `400 ${34*k}px ${F.css}`; c.fillStyle = th.sub; c.fillText(fit(c, r.artist || "Unknown artist", maxW), x, yy + 23); yy += 46; }
+    c.font = `700 ${hs}px ${F.css}`; c.fillStyle = th.text;
+    for(const l of lines){ c.fillText(l, x, yy + lh/2); yy += lh; }
+    if(o.artist){ c.fillStyle = th.sub; c.fillText(fitShrink(c, r.artist || "Unknown artist", maxW, 34*k, 400, F.css, .7), x, yy + 23); yy += 46; }
     if(ct){ c.font = `700 ${42*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, x, yy + 30); }
   }
 }
@@ -376,14 +393,14 @@ function drawCard(cv, o, rows){
   let ts = 78 * k;
   c.font = `700 ${ts}px ${F.css}`;
   const tMax = W - PAD*2 - 120;
-  while(ts > 40 && c.measureText(o.title).width > tMax){ ts -= 2; c.font = `700 ${ts}px ${F.css}`; }
+  while(ts > 34 && c.measureText(o.title).width > tMax){ ts -= 2; c.font = `700 ${ts}px ${F.css}`; }
   c.fillStyle = th.text; c.fillText(fit(c, o.title, tMax), PAD, PAD + 70);
-  c.font = `400 ${34*k}px ${F.css}`; c.fillStyle = th.sub;
-  c.fillText(fit(c, o.subtitle, W - PAD*2), PAD, PAD + 70 + 50);
+  c.fillStyle = th.sub;
+  c.fillText(fitShrink(c, o.subtitle, W - PAD*2, 34*k, 400, F.css, .7), PAD, PAD + 70 + 50);
 
   if(o.footer){
-    c.textAlign = "center"; c.textBaseline = "middle"; c.font = `400 ${28*k}px ${F.css}`; c.fillStyle = th.sub;
-    c.fillText(fit(c, o.footer, W - PAD*2), W/2, H - PAD/2 - 4);
+    c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = th.sub;
+    c.fillText(fitShrink(c, o.footer, W - PAD*2, 28*k, 400, F.css, .7), W/2, H - PAD/2 - 4);
   }
 
   const list = rows.slice(0, o.n);
