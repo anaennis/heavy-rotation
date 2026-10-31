@@ -11,7 +11,13 @@ const THEMES = {
   paper:   {label:"Paper",    bg:["#ece7f6","#d9d2ea"], text:"#1d1b29", sub:"#5f5a76", accent:"#6a2fd6"},
   field:   {label:"Field",    bg:["#123a2c","#0a2219"], text:"#eaf5ec", sub:"#8fb8a2", accent:"#f2b84b"},
   bubble:  {label:"Bubblegum",bg:["#ffdbe9","#ffb1d0"], text:"#3a0b24", sub:"#8c3a63", accent:"#d6196c"},
-  harbor:  {label:"Harbor",   bg:["#0c2a49","#1c6491"], text:"#eef7ff", sub:"#a9d0ea", accent:"#ff8a5b"}
+  harbor:  {label:"Harbor",   bg:["#0c2a49","#1c6491"], text:"#eef7ff", sub:"#a9d0ea", accent:"#ff8a5b"},
+  sorbet:  {label:"Sorbet",   bg:["#ffe9d6","#ffc3a0"], text:"#3b1d12", sub:"#8a5a44", accent:"#e8504a"},
+  mint:    {label:"Mint",     bg:["#dcf6ec","#a9e4cc"], text:"#0f3b2e", sub:"#3f7d68", accent:"#0c8a67"},
+  noir:    {label:"Noir",     bg:["#0b0b0e","#1d1d27"], text:"#f6efe0", sub:"#a49c88", accent:"#d9b45b"},
+  cherry:  {label:"Cherry",   bg:["#3d0a1c","#9a2046"], text:"#ffeef2", sub:"#f0b5c4", accent:"#7de0c3"},
+  vapor:   {label:"Vapor",    bg:["#2b1055","#7597de"], text:"#ffffff", sub:"#d7ccf5", accent:"#ff71ce"},
+  lemon:   {label:"Lemon",    bg:["#fff7b0","#ffe14d"], text:"#2a2300", sub:"#7a6a10", accent:"#2f5bff"}
 };
 const FONTS = {
   grotesk:  {label:"Grotesk",   fam:"Bricolage Grotesque",  css:'"Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif', k:1},
@@ -25,8 +31,12 @@ const SIZES = {
 };
 const PAD = 80, LIST_TOP = 250;
 const BGS = {gradient:"Gradient", flat:"Flat color"};
-const TEXS = {grooves:"Record grooves", grain:"Grain", dots:"Halftone dots", stripes:"Stripes", none:"None"};
-const st = {size:"sq", font:"grotesk", theme:"midnight", bg:"gradient", tex:"grooves"};
+const TEXS = {grooves:"Record grooves", grain:"Grain", dots:"Halftone dots", stripes:"Stripes", blobs:"Soft blobs", sunburst:"Sunburst", waves:"Waves", none:"None"};
+const LAYOUTS = {list:"List", spotlight:"#1 spotlight"};
+const SHAPES = {auto:"Auto", rounded:"Rounded", square:"Square", circle:"Circle"};
+const RANKS = {plain:"Plain", badge:"Badge"};
+const FRAMES = {none:"None", line:"Thin line", bold:"Bold"};
+const st = {size:"sq", font:"grotesk", theme:"midnight", bg:"gradient", tex:"grooves", layout:"list", artShape:"auto", rank:"plain", frame:"none"};
 
 const Card = {
   rows: [], mode: "plays", hasSub: true, autoTitle: "My top tracks", noun: "tracks",
@@ -44,21 +54,33 @@ const HTML = `
 </section>
 <section class="block" id="style" aria-labelledby="h-style">
   <h2 id="h-style">Customize</h2>
+
+  <h3 class="grp">Content</h3>
   <div class="field"><label for="title">Title</label><input type="text" id="title" value="My top tracks" maxlength="40"></div>
   <div class="field"><label for="subtitle">Subtitle (leave empty to fill it in automatically)</label><input type="text" id="subtitle" maxlength="60"></div>
+  <div class="field"><label for="footer">Footer, such as your handle (optional)</label><input type="text" id="footer" maxlength="50" placeholder="@yourname"></div>
+  <div class="field"><label for="count">Number of entries</label><select id="count"></select></div>
+  <div class="checks">
+    <label><input type="checkbox" id="showArtist" checked> Show artist</label>
+    <label><input type="checkbox" id="showCounts" checked> Show counts</label>
+    <label><input type="checkbox" id="showArt" checked> Show cover art</label>
+    <label><input type="checkbox" id="dividers" checked> Show dividers</label>
+  </div>
+
+  <h3 class="grp">Layout</h3>
+  <div class="field"><span class="lab">Image shape</span><div class="chips" id="sizes"></div></div>
+  <div class="field"><span class="lab">Arrangement</span><div class="chips" id="layouts"></div></div>
+  <div class="field"><span class="lab">Cover art shape</span><div class="chips" id="shapes"></div></div>
+  <div class="field"><span class="lab">Rank numbers</span><div class="chips" id="ranks"></div></div>
+
+  <h3 class="grp">Look</h3>
   <div class="field"><span class="lab">Theme</span><div class="swatches" id="themes"></div></div>
   <div class="field"><label for="accent">Accent color</label><input type="color" id="accent" value="#7c9cff"></div>
   <div class="field"><span class="lab">Background</span><div class="chips" id="bgs"></div></div>
   <div class="field"><label for="flat">Flat background color</label><input type="color" id="flat" value="#12141c"></div>
   <div class="field"><span class="lab">Texture</span><div class="chips" id="texs"></div></div>
+  <div class="field"><span class="lab">Frame</span><div class="chips" id="frames"></div></div>
   <div class="field"><span class="lab">Font</span><div class="chips" id="fonts"></div></div>
-  <div class="field"><span class="lab">Shape</span><div class="chips" id="sizes"></div></div>
-  <div class="field"><label for="count">Number of tracks</label><select id="count"></select></div>
-  <div class="checks">
-    <label><input type="checkbox" id="showArtist" checked> Show artist</label>
-    <label><input type="checkbox" id="showCounts" checked> Show counts</label>
-    <label><input type="checkbox" id="showArt" checked> Show cover art</label>
-  </div>
 </section>`;
 
 const fmtDur = ms => { const t = Math.round(ms/60000), h = Math.floor(t/60), m = t%60; return h ? `${h}h ${m}m` : `${m}m`; };
@@ -68,7 +90,16 @@ function fit(c, text, maxW){
   while(lo < hi){ const mid = (lo+hi+1)>>1; if(c.measureText(text.slice(0,mid).trimEnd()+"…").width <= maxW) lo = mid; else hi = mid-1; }
   return text.slice(0,lo).trimEnd() + "…";
 }
-function maxRows(size, artist){ return Math.floor((SIZES[size].h - LIST_TOP - PAD) / (artist ? 100 : 68)); }
+const minRow = artist => artist ? 100 : 68;
+function spotGeo(size){                              // the big #1 block of the spotlight layout
+  if(SIZES[size].h > 1500){ const S = 640; return {stacked:true, S, heroH:S + 24 + 190 + 36}; }
+  const S = SIZES[size].h > 1100 ? 400 : 300; return {stacked:false, S, heroH:S + 36};
+}
+function maxRows(size, artist, layout){
+  const avail = SIZES[size].h - LIST_TOP - PAD;
+  if(layout === "spotlight") return 1 + Math.max(0, Math.floor((avail - spotGeo(size).heroH) / minRow(artist)));
+  return Math.floor(avail / minRow(artist));
+}
 
 const effArtist = () => $("showArtist").checked && Card.hasSub;
 function getOpts(){
@@ -79,7 +110,10 @@ function getOpts(){
     subtitle:$("subtitle").value.trim() || Card.getSubtitle(),
     n:+$("count").value || 5, artist:effArtist(),
     counts:$("showCounts").checked && Card.mode !== "none", by:Card.mode,
-    art:$("showArt").checked, round:Card.noun === "artists"
+    art:$("showArt").checked,
+    shape:st.artShape === "auto" ? (Card.noun === "artists" ? "circle" : "rounded") : st.artShape,
+    layout:st.layout, rank:st.rank, frame:st.frame,
+    dividers:$("dividers").checked, footer:$("footer").value.trim()
   };
 }
 
@@ -96,10 +130,10 @@ function getImg(url){
   }
   return e.ok ? e.img : null;
 }
-function shapePath(c, x, y, s, round){
+function shapePath(c, x, y, s, shape){
   c.beginPath();
-  if(round){ c.arc(x + s/2, y + s/2, s/2, 0, Math.PI*2); return; }
-  const r = s * .12;
+  if(shape === "circle"){ c.arc(x + s/2, y + s/2, s/2, 0, Math.PI*2); return; }
+  const r = shape === "square" ? 0 : s * .12;
   c.moveTo(x + r, y); c.arcTo(x + s, y, x + s, y + s, r); c.arcTo(x + s, y + s, x, y + s, r);
   c.arcTo(x, y + s, x, y, r); c.arcTo(x, y, x + s, y, r); c.closePath();
 }
@@ -109,9 +143,9 @@ function seeded(str){
   let s = h >>> 0;
   return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ s>>>15, 1|s); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; };
 }
-function drawArt(c, row, x, y, s, round){
+function drawArt(c, row, x, y, s, shape){
   c.save();
-  shapePath(c, x, y, s, round); c.clip();
+  shapePath(c, x, y, s, shape); c.clip();
   const e = row.img ? getImg(row.img) : null;
   if(e){
     const side = Math.min(e.naturalWidth, e.naturalHeight) || 1;
@@ -133,6 +167,9 @@ function drawArt(c, row, x, y, s, round){
 }
 
 const hexRgb = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+const rgba = (h, a) => { const [r,g,b] = hexRgb(h); return `rgba(${r},${g},${b},${a})`; };
+const lum = h => { const [r,g,b] = hexRgb(h).map(v => { v /= 255; return v <= .03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4); }); return .2126*r + .7152*g + .0722*b; };
+const onColor = h => lum(h) > .4 ? "#14141a" : "#ffffff";
 let grainCache = {key:"", cv:null};
 function grain(c, W, H, rgb){
   const key = [W, H, rgb.join(",")].join("|");
@@ -148,10 +185,12 @@ function grain(c, W, H, rgb){
 }
 function drawTexture(c, o, W, H){
   c.save();
-  if(o.tex === "grooves"){                          // record grooves in the top-right corner
+  if(o.tex === "grooves"){                          // record grooves in the top-right corner (the spotlight draws a vinyl instead)
+    if(o.layout !== "spotlight"){
     c.strokeStyle = o.accent; c.lineWidth = 3;
     for(let r = 170; r < 760; r += 44){ c.globalAlpha = .17 * (1 - (r-170)/700); c.beginPath(); c.arc(W-10, -10, r, 0, Math.PI*2); c.stroke(); }
     c.globalAlpha = .95; c.fillStyle = o.accent; c.beginPath(); c.arc(W-10, -10, 112, 0, Math.PI*2); c.fill();
+    }
   } else if(o.tex === "grain"){
     grain(c, W, H, hexRgb(o.theme.text));
   } else if(o.tex === "dots"){                      // halftone dots that fade from the top-right corner
@@ -167,9 +206,153 @@ function drawTexture(c, o, W, H){
   } else if(o.tex === "stripes"){
     c.strokeStyle = o.theme.text; c.globalAlpha = .07; c.lineWidth = 3;
     for(let x = -H; x < W + H; x += 30){ c.beginPath(); c.moveTo(x, 0); c.lineTo(x + H, H); c.stroke(); }
+  } else if(o.tex === "blobs"){
+    const rnd = seeded("blobs");
+    for(let i = 0; i < 7; i++){
+      const x = rnd()*W, y = rnd()*H, r = 260 + rnd()*340, light = lum(o.bg === "flat" ? o.flat : o.theme.bg[0]) > .5, col = i % 2 ? o.accent : (light ? "#ffffff" : o.theme.text);
+      const g = c.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, rgba(col, .22)); g.addColorStop(1, rgba(col, 0));
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+    }
+  } else if(o.tex === "sunburst"){
+    const ox = W/2, oy = H*.2, R = Math.hypot(W, H), n = 32;
+    c.fillStyle = o.accent; c.globalAlpha = .09;
+    for(let i = 0; i < n; i += 2){
+      const a1 = i/n*Math.PI*2, a2 = (i+1)/n*Math.PI*2;
+      c.beginPath(); c.moveTo(ox, oy); c.lineTo(ox + R*Math.cos(a1), oy + R*Math.sin(a1)); c.lineTo(ox + R*Math.cos(a2), oy + R*Math.sin(a2)); c.closePath(); c.fill();
+    }
+  } else if(o.tex === "waves"){
+    c.strokeStyle = o.accent; c.globalAlpha = .16; c.lineWidth = 3;
+    for(let y0 = 90; y0 < H + 90; y0 += 58){
+      c.beginPath();
+      for(let x = 0; x <= W; x += 12){ const y = y0 + Math.sin(x/95 + y0/70) * 20; if(x === 0) c.moveTo(x, y); else c.lineTo(x, y); }
+      c.stroke();
+    }
   }
   c.restore();
 }
+function drawVinyl(c, o, cx, cy, R){
+  c.save();
+  c.fillStyle = "#0d0d12"; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI*2); c.fill();
+  c.strokeStyle = "#ffffff"; c.lineWidth = 2;
+  for(let r = R*.38; r < R*.97; r += R*.065){ c.globalAlpha = .09; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI*2); c.stroke(); }
+  c.globalAlpha = 1; c.fillStyle = o.accent; c.beginPath(); c.arc(cx, cy, R*.3, 0, Math.PI*2); c.fill();
+  c.fillStyle = "#0d0d12"; c.beginPath(); c.arc(cx, cy, R*.045, 0, Math.PI*2); c.fill();
+  c.restore();
+}
+function wrapLines(c, text, maxW, maxLines){
+  const words = String(text).split(/\s+/), lines = []; let cur = "";
+  for(let i = 0; i < words.length; i++){
+    const test = cur ? cur + " " + words[i] : words[i];
+    if(!cur || c.measureText(test).width <= maxW){ cur = test; continue; }
+    lines.push(cur); cur = words[i];
+    if(lines.length === maxLines - 1){ cur = words.slice(i).join(" "); break; }
+  }
+  lines.push(cur);
+  return lines.slice(0, maxLines).map(l => fit(c, l, maxW));
+}
+function countText(o, r){
+  if(!o.counts) return "";
+  return o.by === "plays" ? `${r.n.toLocaleString()} ${r.n === 1 ? "play" : "plays"}` : fmtDur(r.ms);
+}
+
+function rowMetrics(c, o, F, k, rowH){
+  const boost = Math.min(1.5, Math.max(1, rowH / 170));
+  let t = o.artist ? Math.min(Math.max(rowH*.36, 34), 54) : Math.min(Math.max(rowH*.46, 34), 58);
+  t *= boost;
+  if(o.art) t = Math.min(t, 48 * boost);
+  const tall = rowH >= 230 && o.counts;
+  if(tall) t = Math.min(t, 60);                       // keep names readable and untruncated in Story
+  t *= k;
+  const artS = o.art ? Math.min(rowH * .8, 150 * boost) : 0;
+  const badge = o.rank === "badge", d = t * 1.45;
+  c.font = `700 ${t*1.1}px ${F.css}`;
+  const rankW = Math.max(o.art ? 84 : 104, badge ? d + 18 : c.measureText("00").width + 22);
+  return {t, aSize:t*.72, artS, rankW, badge, d, tall};
+}
+function drawRow(c, o, F, th, m, r, rank, yTop, rowH, divider){
+  const W = SIZES[o.size].w, cy = yTop + rowH/2, t = m.t;
+  // tall rows (Story) stack name, artist and count so names keep their full width
+  const nameH = t * 1.25, artH = o.artist ? m.aSize * 1.4 : 0, cntH = (m.tall && o.counts) ? t * .8 * 1.3 : 0;
+  const total = nameH + artH + cntH;
+  const ty = m.tall ? cy - total/2 + nameH/2 : (o.artist ? cy - m.aSize*.62 : cy);
+  c.textBaseline = "middle";
+  if(m.badge){
+    c.fillStyle = o.accent; c.beginPath(); c.arc(PAD + m.d/2, ty, m.d/2, 0, Math.PI*2); c.fill();
+    c.textAlign = "center"; c.fillStyle = onColor(o.accent); c.font = `700 ${t*.9}px ${F.css}`;
+    c.fillText(String(rank), PAD + m.d/2, ty + t*.03);
+  } else {
+    c.textAlign = "left"; c.font = `700 ${t*1.1}px ${F.css}`; c.fillStyle = o.accent;
+    c.fillText(String(rank), PAD, ty);
+  }
+  let cw = 0;
+  if(o.counts && !m.tall){
+    c.textAlign = "right";
+    if(o.by === "plays"){
+      const unit = r.n === 1 ? "play" : "plays", ns = r.n.toLocaleString();
+      c.font = `400 ${t*.62}px ${F.css}`; c.fillStyle = th.sub;
+      c.fillText(unit, W-PAD, ty + t*.04);
+      const uw = c.measureText(unit).width;
+      c.font = `700 ${t*1.05}px ${F.css}`; c.fillStyle = th.text;
+      c.fillText(ns, W-PAD-uw-12, ty);
+      cw = uw + 12 + c.measureText(ns).width;
+    } else {
+      const s = fmtDur(r.ms);
+      c.font = `700 ${t}px ${F.css}`; c.fillStyle = th.text;
+      c.fillText(s, W-PAD, ty); cw = c.measureText(s).width;
+    }
+  }
+  if(o.art) drawArt(c, r, PAD + m.rankW, cy - m.artS/2, m.artS, o.shape);
+  const x = PAD + m.rankW + (o.art ? m.artS + 24 : 0), maxW = W - PAD - x - cw - (cw ? 28 : 0);
+  c.textAlign = "left"; c.textBaseline = "middle"; c.font = `700 ${t}px ${F.css}`; c.fillStyle = th.text;
+  c.fillText(fit(c, r.name, maxW), x, ty);
+  if(o.artist){
+    c.font = `400 ${m.aSize}px ${F.css}`; c.fillStyle = th.sub;
+    const ay = m.tall ? ty + nameH/2 + artH/2 : cy + t*.58;
+    c.fillText(fit(c, r.artist || "Unknown artist", W - PAD - x), x, ay);
+  }
+  if(cntH){
+    c.font = `700 ${t*.8}px ${F.css}`; c.fillStyle = o.accent;
+    c.fillText(countText(o, r), x, ty + nameH/2 + artH + cntH/2);
+  }
+  if(divider && o.dividers){
+    c.save(); c.globalAlpha = .14; c.fillStyle = th.text;
+    c.fillRect(PAD, yTop + rowH - 1, W - PAD*2, 2); c.restore();
+  }
+}
+
+function drawHero(c, o, F, th, k, r, y0){
+  const W = SIZES[o.size].w, g = spotGeo(o.size), S = g.S;
+  const peek = o.tex === "grooves" ? S * .2 : 0;
+  const ct = countText(o, r);
+  c.textBaseline = "middle";
+  if(g.stacked){
+    const ax = (W - S - peek) / 2, ay = y0 + 4;
+    if(peek) drawVinyl(c, o, ax + S/2 + peek, ay + S/2, S/2);
+    drawArt(c, r, ax, ay, S, o.shape);
+    c.textAlign = "center";
+    let yy = ay + S + 24;
+    c.font = `700 ${66*k}px ${F.css}`; c.fillStyle = th.text;
+    c.fillText(fit(c, r.name, W - PAD*2), W/2, yy + 36); yy += 76;
+    if(o.artist){ c.font = `400 ${38*k}px ${F.css}`; c.fillStyle = th.sub; c.fillText(fit(c, r.artist || "Unknown artist", W - PAD*2), W/2, yy + 20); yy += 52; }
+    if(ct){ c.font = `700 ${46*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, W/2, yy + 24); }
+  } else {
+    const ax = PAD, ay = y0;
+    if(peek) drawVinyl(c, o, ax + S/2 + peek, ay + S/2, S/2);
+    drawArt(c, r, ax, ay, S, o.shape);
+    const x = ax + S + peek + 40, maxW = W - PAD - x;
+    c.textAlign = "left"; c.font = `700 ${54*k}px ${F.css}`;
+    const lines = wrapLines(c, r.name, maxW, 2);
+    const hh = 44 + lines.length * 62 + (o.artist ? 46 : 0) + (ct ? 60 : 0);
+    let yy = ay + (S - hh) / 2;
+    c.font = `700 ${34*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText("#1", x, yy + 17); yy += 44;
+    c.font = `700 ${54*k}px ${F.css}`; c.fillStyle = th.text;
+    for(const l of lines){ c.fillText(l, x, yy + 31); yy += 62; }
+    if(o.artist){ c.font = `400 ${34*k}px ${F.css}`; c.fillStyle = th.sub; c.fillText(fit(c, r.artist || "Unknown artist", maxW), x, yy + 23); yy += 46; }
+    if(ct){ c.font = `700 ${42*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, x, yy + 30); }
+  }
+}
+
 function drawCard(cv, o, rows){
   const {w:W, h:H} = SIZES[o.size], th = o.theme, F = FONTS[o.font], k = F.k;
   cv.width = W; cv.height = H;
@@ -179,6 +362,14 @@ function drawCard(cv, o, rows){
   else { const g = c.createLinearGradient(0, 0, W*.7, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); c.fillStyle = g; }
   c.fillRect(0, 0, W, H);
   drawTexture(c, o, W, H);
+
+  if(o.frame !== "none"){
+    const bold = o.frame === "bold", m = bold ? 26 : 30, r = 44;
+    c.save(); c.strokeStyle = o.accent; c.lineWidth = bold ? 12 : 3;
+    c.beginPath();
+    c.moveTo(m + r, m); c.arcTo(W - m, m, W - m, H - m, r); c.arcTo(W - m, H - m, m, H - m, r);
+    c.arcTo(m, H - m, m, m, r); c.arcTo(m, m, W - m, m, r); c.closePath(); c.stroke(); c.restore();
+  }
 
   // header
   c.textBaseline = "alphabetic"; c.textAlign = "left";
@@ -190,57 +381,31 @@ function drawCard(cv, o, rows){
   c.font = `400 ${34*k}px ${F.css}`; c.fillStyle = th.sub;
   c.fillText(fit(c, o.subtitle, W - PAD*2), PAD, PAD + 70 + 50);
 
-  // list
+  if(o.footer){
+    c.textAlign = "center"; c.textBaseline = "middle"; c.font = `400 ${28*k}px ${F.css}`; c.fillStyle = th.sub;
+    c.fillText(fit(c, o.footer, W - PAD*2), W/2, H - PAD/2 - 4);
+  }
+
   const list = rows.slice(0, o.n);
-  const bottom = H - PAD, avail = bottom - LIST_TOP;
+  const bottom = H - PAD - (o.footer ? 30 : 0), avail = bottom - LIST_TOP;
   if(!list.length){
-    c.textAlign = "center"; c.fillStyle = th.sub; c.font = `400 ${40*k}px ${F.css}`;
+    c.textAlign = "center"; c.textBaseline = "alphabetic"; c.fillStyle = th.sub; c.font = `400 ${40*k}px ${F.css}`;
     c.fillText("No plays in this window", W/2, LIST_TOP + avail/2);
     return;
   }
-  const rowH = Math.min(avail / list.length, 180);
-  const y0 = bottom - rowH * list.length;
-  let t = o.artist ? Math.min(Math.max(rowH * .36, 34), 54) : Math.min(Math.max(rowH * .46, 34), 58);
-  if(o.art) t = Math.min(t, 48);                    // leave room for the cover art
-  t *= k;
-  const aSize = t * .72, art = o.art, artS = art ? Math.min(rowH * .8, 150) : 0, rankW = art ? 84 : 104;
-  c.textBaseline = "middle";
-  list.forEach((r, i) => {
-    const cy = y0 + i*rowH + rowH/2;
-    const ty = o.artist ? cy - aSize*.62 : cy;
-    c.textAlign = "left"; c.font = `700 ${t*1.1}px ${F.css}`; c.fillStyle = o.accent;
-    c.fillText(String(i+1), PAD, ty);
-    let cw = 0;
-    if(o.counts){
-      c.textAlign = "right";
-      if(o.by === "plays"){
-        const unit = r.n === 1 ? "play" : "plays";
-        c.font = `400 ${t*.62}px ${F.css}`; c.fillStyle = th.sub;
-        c.fillText(unit, W-PAD, ty + t*.04);
-        const uw = c.measureText(unit).width;
-        c.font = `700 ${t*1.05}px ${F.css}`; c.fillStyle = th.text;
-        const ns = r.n.toLocaleString();
-        c.fillText(ns, W-PAD-uw-12, ty);
-        cw = uw + 12 + c.measureText(ns).width;
-      } else {
-        const s = fmtDur(r.ms);
-        c.font = `700 ${t}px ${F.css}`; c.fillStyle = th.text;
-        c.fillText(s, W-PAD, ty); cw = c.measureText(s).width;
-      }
+
+  if(o.layout === "spotlight"){
+    drawHero(c, o, F, th, k, list[0], LIST_TOP);
+    const rest = list.slice(1), top = LIST_TOP + spotGeo(o.size).heroH, area = bottom - top;
+    if(rest.length){
+      const rowH = Math.min(area / rest.length, 190), m = rowMetrics(c, o, F, k, rowH);
+      rest.forEach((r, i) => drawRow(c, o, F, th, m, r, i + 2, top + i*rowH, rowH, i < rest.length - 1));
     }
-    if(art) drawArt(c, r, PAD + rankW, cy - artS/2, artS, o.round);
-    const x = PAD + rankW + (art ? artS + 24 : 0), maxW = W - PAD - x - cw - (cw ? 28 : 0);
-    c.textAlign = "left"; c.font = `700 ${t}px ${F.css}`; c.fillStyle = th.text;
-    c.fillText(fit(c, r.name, maxW), x, ty);
-    if(o.artist){
-      c.font = `400 ${aSize}px ${F.css}`; c.fillStyle = th.sub;
-      c.fillText(fit(c, r.artist || "Unknown artist", W - PAD - x), x, cy + t*.58);
-    }
-    if(i < list.length - 1){
-      c.save(); c.globalAlpha = .14; c.fillStyle = th.text;
-      c.fillRect(PAD, y0 + (i+1)*rowH - 1, W - PAD*2, 2); c.restore();
-    }
-  });
+  } else {
+    const rowH = Math.min(avail / list.length, 340), y0 = bottom - rowH * list.length;
+    const m = rowMetrics(c, o, F, k, rowH);
+    list.forEach((r, i) => drawRow(c, o, F, th, m, r, i + 1, y0 + i*rowH, rowH, i < list.length - 1));
+  }
   cv.setAttribute("aria-label", `${o.title}. ${o.subtitle}. ` + list.map((r,i)=>`${i+1}, ${r.name}${r.artist ? " by " + r.artist : ""}`).join("; "));
 }
 
@@ -267,7 +432,7 @@ Card.setRows = (rows, mode, opts) => {
 };
 
 function refreshCountOptions(){
-  const max = maxRows(st.size, effArtist());
+  const max = maxRows(st.size, effArtist(), st.layout);
   const opts = [5,10,15,20].filter(n => n <= max);
   if(!opts.includes(max)) opts.push(max);
   opts.sort((a,b)=>a-b);
@@ -284,7 +449,7 @@ function buildChoice(el, items, key){
     b.onclick = () => {
       st[key] = id;
       [...el.children].forEach(x => x.setAttribute("aria-pressed", String(x.dataset.id === id)));
-      if(key === "size") refreshCountOptions();
+      if(key === "size" || key === "layout") refreshCountOptions();
       if(key === "bg") syncFlat();
       Card.schedule();
     };
@@ -349,11 +514,15 @@ Card.mount = function(container){
   buildThemes();
   buildChoice($("bgs"), Object.entries(BGS), "bg");
   buildChoice($("texs"), Object.entries(TEXS), "tex");
+  buildChoice($("layouts"), Object.entries(LAYOUTS), "layout");
+  buildChoice($("shapes"), Object.entries(SHAPES), "artShape");
+  buildChoice($("ranks"), Object.entries(RANKS), "rank");
+  buildChoice($("frames"), Object.entries(FRAMES), "frame");
   $("accent").value = THEMES[st.theme].accent;
   $("flat").value = THEMES[st.theme].bg[0];
   syncFlat();
   refreshCountOptions();
-  for(const id of ["title","subtitle","accent","flat","count","showCounts","showArt"]) $(id).addEventListener("input", Card.schedule);
+  for(const id of ["title","subtitle","footer","accent","flat","count","showCounts","showArt","dividers"]) $(id).addEventListener("input", Card.schedule);
   $("showArtist").onchange = () => { refreshCountOptions(); Card.schedule(); };
   $("save").onclick = saveImage;
   Card.schedule();

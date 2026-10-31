@@ -35,6 +35,10 @@ Spotify has tightened its rules in 2026. Check the current limits in the [quota 
 3. Request it and confirm in the email Spotify sends. Spotify says it can take up to 30 days. It often arrives in a few days.
 4. Drop the zip you receive onto the page. It is read in the browser and never uploaded. Only track, artist, time and play length are used.
 
+## Making it yours
+
+The Customize panel on both pages controls the look of the image: three shapes (Square, Portrait, Story), a list or **#1 spotlight** arrangement, 12 color themes plus your own accent and flat color, eight textures, an optional frame, cover art shape, plain or badge rank numbers, three fonts, and an optional footer line for your handle. In Story shape, the spotlight puts your number one front and center, with a record peeking out behind it when the Record grooves texture is on.
+
 ## Cover art
 
 Both pages draw a square next to each entry. Where a real cover isn't available, they draw a generated abstract tile, so the layout never has holes. Artists get round tiles.
