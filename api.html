@@ -6,23 +6,41 @@
 <title>Heavy Rotation: Spotify login</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700&family=Fraunces:wght@400;700&family=Big+Shoulders+Display:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Fraunces:wght@400;700&family=Big+Shoulders+Display:wght@400;700&family=Fredoka:wght@400;700&family=Space+Mono:wght@400;700&family=DM+Serif+Display&family=Unbounded:wght@400;700&family=Bungee&family=Permanent+Marker&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="config.js"></script>
 </head>
 <body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <nav class="nav" aria-label="Versions">
+        <a href="index.html">Upload your history</a>
+        <a href="api.html" aria-current="page">Log in with Spotify</a>
+      </nav>
+      <h1>Heavy<br>Rotation</h1>
+      <p class="lede">Log in with Spotify and get a shareable image of your most played tracks or artists from the last 4 weeks, 6 months or 12 months.</p>
+      <ul class="stickers" aria-label="What you can make"><li class="sticker">Top tracks</li><li class="sticker">Top artists</li><li class="sticker">4 weeks to 12 months</li></ul>
+    </div>
+    <div class="record-wrap" aria-hidden="true">
+      <svg class="record" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="98" fill="#0d0b16"/>
+        <g fill="none" stroke="#ffffff" stroke-opacity=".11" stroke-width="1.4">
+          <circle cx="100" cy="100" r="91"/><circle cx="100" cy="100" r="84"/><circle cx="100" cy="100" r="77"/>
+          <circle cx="100" cy="100" r="70"/><circle cx="100" cy="100" r="63"/><circle cx="100" cy="100" r="56"/><circle cx="100" cy="100" r="49"/>
+        </g>
+        <circle cx="100" cy="100" r="38" fill="#ff5c8a"/>
+        <circle cx="100" cy="100" r="38" fill="none" stroke="#17102b" stroke-width="3"/>
+        <circle cx="100" cy="76" r="6" fill="#ffd23f"/>
+        <circle cx="100" cy="100" r="5" fill="#0d0b16"/>
+      </svg>
+    </div>
+  </div>
+</header>
 <main>
-  <nav class="nav" aria-label="Versions">
-    <a href="index.html">Upload your history</a>
-    <a href="api.html" aria-current="page">Log in with Spotify</a>
-  </nav>
-  <header>
-    <h1>Heavy Rotation</h1>
-    <p class="lede">Log in with Spotify and get a shareable image of your most played tracks or artists from the last 4 weeks, 6 months or 12 months.</p>
-  </header>
 
-  <section class="block" id="login" aria-labelledby="h-login">
-    <h2 id="h-login">1. Connect Spotify</h2>
+  <section class="block sleeve" id="login" aria-labelledby="h-login">
+    <h2 id="h-login"><span class="num">1</span>Connect Spotify</h2>
     <button class="btn auto" id="loginBtn" type="button">Log in with Spotify</button>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <p class="note">This page only asks to read your top tracks. Nothing is sent anywhere except to Spotify, and nothing is stored after you close the tab.</p>
@@ -36,7 +54,7 @@
 
   <div id="app" hidden>
     <section class="block" id="filters" aria-labelledby="h-range">
-      <h2 id="h-range">2. Pick what to show</h2>
+      <h2 id="h-range"><span class="num">2</span>Pick what to show</h2>
       <div class="chips" id="kinds" style="margin-bottom:12px"></div>
       <div class="chips" id="ranges"></div>
       <p class="summary" id="summary" style="margin-top:14px" role="status" aria-live="polite"></p>

@@ -6,24 +6,43 @@
 <title>Heavy Rotation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700&family=Fraunces:wght@400;700&family=Big+Shoulders+Display:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Fraunces:wght@400;700&family=Big+Shoulders+Display:wght@400;700&family=Fredoka:wght@400;700&family=Space+Mono:wght@400;700&family=DM+Serif+Display&family=Unbounded:wght@400;700&family=Bungee&family=Permanent+Marker&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <nav class="nav" aria-label="Versions">
+        <a href="index.html" aria-current="page">Upload your history</a>
+        <a href="api.html">Log in with Spotify</a>
+      </nav>
+      <h1>Heavy<br>Rotation</h1>
+      <p class="lede">Turn your Spotify listening history into a shareable image of your most played tracks, artists or albums.</p>
+      <ul class="stickers" aria-label="What you can make"><li class="sticker">Top tracks</li><li class="sticker">Top artists</li><li class="sticker">Top albums</li></ul>
+    </div>
+    <div class="record-wrap" aria-hidden="true">
+      <svg class="record" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="98" fill="#0d0b16"/>
+        <g fill="none" stroke="#ffffff" stroke-opacity=".11" stroke-width="1.4">
+          <circle cx="100" cy="100" r="91"/><circle cx="100" cy="100" r="84"/><circle cx="100" cy="100" r="77"/>
+          <circle cx="100" cy="100" r="70"/><circle cx="100" cy="100" r="63"/><circle cx="100" cy="100" r="56"/><circle cx="100" cy="100" r="49"/>
+        </g>
+        <circle cx="100" cy="100" r="38" fill="#ff5c8a"/>
+        <circle cx="100" cy="100" r="38" fill="none" stroke="#17102b" stroke-width="3"/>
+        <circle cx="100" cy="76" r="6" fill="#ffd23f"/>
+        <circle cx="100" cy="100" r="5" fill="#0d0b16"/>
+      </svg>
+    </div>
+  </div>
+</header>
 <main>
-  <nav class="nav" aria-label="Versions">
-    <a href="index.html" aria-current="page">Upload your history</a>
-    <a href="api.html">Log in with Spotify</a>
-  </nav>
-  <header>
-    <h1>Heavy Rotation</h1>
-    <p class="lede">Turn your Spotify listening history into a shareable image of your most played tracks, artists or albums.</p>
-  </header>
 
-  <section class="block" aria-labelledby="h-load">
-    <h2 id="h-load">1. Add your history</h2>
+  <section class="block sleeve" aria-labelledby="h-load">
+    <h2 id="h-load"><span class="num">1</span>Add your history</h2>
     <label class="drop" id="drop">
+      <svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="96" fill="#17102b"/><circle cx="100" cy="100" r="62" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3"/><circle cx="100" cy="100" r="38" fill="#ff5c8a"/><circle cx="100" cy="78" r="7" fill="#ffd23f"/><circle cx="100" cy="100" r="5" fill="#17102b"/></svg>
       <strong>Choose your Spotify zip</strong>
       <span>or drop it here. The unzipped JSON files work too.</span>
       <input id="file" type="file" multiple accept=".zip,.json,application/zip,application/json">
@@ -45,7 +64,7 @@
 
   <div id="app" hidden>
     <section class="block" id="filters" aria-labelledby="h-filter">
-      <h2 id="h-filter">2. Pick the plays to count</h2>
+      <h2 id="h-filter"><span class="num">2</span>Pick the plays to count</h2>
       <div class="field">
         <label for="month">Month</label>
         <select id="month"></select>
@@ -74,7 +93,7 @@
       <div class="row2">
         <div class="field">
           <label for="by">Rank by</label>
-          <select id="by"><option value="plays">Number of plays</option><option value="time">Time listened</option></select>
+          <select id="by"><option value="plays">Plays</option><option value="time">Time listened</option></select>
         </div>
         <div class="field">
           <label for="minlen">Count a play after</label>

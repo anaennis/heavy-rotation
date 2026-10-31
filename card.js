@@ -19,10 +19,16 @@ const THEMES = {
   vapor:   {label:"Vapor",    bg:["#2b1055","#7597de"], text:"#ffffff", sub:"#d7ccf5", accent:"#ff71ce"},
   lemon:   {label:"Lemon",    bg:["#fff7b0","#ffe14d"], text:"#2a2300", sub:"#7a6a10", accent:"#2f5bff"}
 };
-const FONTS = {
-  grotesk:  {label:"Grotesk",   fam:"Bricolage Grotesque",  css:'"Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif', k:1},
-  serif:    {label:"Serif",     fam:"Fraunces",             css:'"Fraunces", Georgia, "Times New Roman", serif', k:.96},
-  condensed:{label:"Condensed", fam:"Big Shoulders Display",css:'"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', k:1.18}
+const FONTS = {                                       // b = the bold weight to ask for (single-weight fonts only have 400)
+  grotesk:  {label:"Grotesk",  fam:"Bricolage Grotesque",  css:'"Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif', k:1,    b:700},
+  serif:    {label:"Serif",    fam:"Fraunces",             css:'"Fraunces", Georgia, "Times New Roman", serif', k:.96, b:700},
+  condensed:{label:"Condensed",fam:"Big Shoulders Display",css:'"Big Shoulders Display", "Arial Narrow", Impact, sans-serif', k:1.18, b:700},
+  round:    {label:"Round",    fam:"Fredoka",              css:'"Fredoka", "Trebuchet MS", system-ui, sans-serif', k:1, b:700},
+  mono:     {label:"Mono",     fam:"Space Mono",           css:'"Space Mono", ui-monospace, Menlo, Consolas, monospace', k:.86, b:700},
+  editorial:{label:"Editorial",fam:"DM Serif Display",     css:'"DM Serif Display", Georgia, "Times New Roman", serif', k:1, b:400},
+  wide:     {label:"Wide",     fam:"Unbounded",            css:'"Unbounded", "Arial Black", system-ui, sans-serif', k:.8, b:700},
+  chunky:   {label:"Chunky",   fam:"Bungee",               css:'"Bungee", Impact, "Arial Black", sans-serif', k:.82, b:400},
+  marker:   {label:"Marker",   fam:"Permanent Marker",     css:'"Permanent Marker", "Marker Felt", "Comic Sans MS", cursive', k:.95, b:400}
 };
 const SIZES = {
   sq:{label:"Square",   w:1080, h:1080},
@@ -72,6 +78,7 @@ const HTML = `
   <div class="field"><span class="lab">Arrangement</span><div class="chips" id="layouts"></div></div>
   <div class="field"><span class="lab">Cover art shape</span><div class="chips" id="shapes"></div></div>
   <div class="field"><span class="lab">Rank numbers</span><div class="chips" id="ranks"></div></div>
+  <div class="field"><label for="scale">List size: <output id="scaleOut">100%</output></label><input type="range" id="scale" min="60" max="140" step="5" value="100"><p class="hint" id="sizeNote" role="status" aria-live="polite"></p></div>
 
   <h3 class="grp">Look</h3>
   <div class="field"><span class="lab">Theme</span><div class="swatches" id="themes"></div></div>
@@ -95,6 +102,18 @@ function spotGeo(size){                              // the big #1 block of the 
   if(SIZES[size].h > 1500){ const S = 640; return {stacked:true, S, heroH:S + 24 + 190 + 36}; }
   const S = SIZES[size].h > 1100 ? 400 : 300; return {stacked:false, S, heroH:S + 36};
 }
+// Shrinks the font (down to minK of its size) so long text fits; only adds "…" if it still doesn't fit at the smallest size.
+function fitShrink(c, text, maxW, size, weight, css, minK){
+  let s = size;
+  c.font = `${weight} ${s}px ${css}`;
+  const w = c.measureText(text).width;
+  if(w <= maxW) return text;
+  const floor = size * minK;
+  s = Math.max(floor, size * maxW / w);
+  c.font = `${weight} ${s}px ${css}`;
+  while(s > floor && c.measureText(text).width > maxW){ s -= 1; c.font = `${weight} ${s}px ${css}`; }
+  return fit(c, text, maxW);
+}
 function maxRows(size, artist, layout){
   const avail = SIZES[size].h - LIST_TOP - PAD;
   if(layout === "spotlight") return 1 + Math.max(0, Math.floor((avail - spotGeo(size).heroH) / minRow(artist)));
@@ -113,7 +132,7 @@ function getOpts(){
     art:$("showArt").checked,
     shape:st.artShape === "auto" ? (Card.noun === "artists" ? "circle" : "rounded") : st.artShape,
     layout:st.layout, rank:st.rank, frame:st.frame,
-    dividers:$("dividers").checked, footer:$("footer").value.trim()
+    dividers:$("dividers").checked, footer:$("footer").value.trim(), scale:(+$("scale").value || 100) / 100
   };
 }
 
@@ -260,15 +279,20 @@ function rowMetrics(c, o, F, k, rowH){
   const boost = Math.min(1.5, Math.max(1, rowH / 170));
   let t = o.artist ? Math.min(Math.max(rowH*.36, 34), 54) : Math.min(Math.max(rowH*.46, 34), 58);
   t *= boost;
-  if(o.art) t = Math.min(t, 48 * boost);
   const tall = rowH >= 230 && o.counts;
-  if(tall) t = Math.min(t, 60);                       // keep names readable and untruncated in Story
+  if(tall) t = Math.min(t, 60);                       // stacked rows have the full width, so names stay readable
+  else if(o.art) t = Math.min(t, 48 * Math.min(boost, 1.15));   // beside bigger covers, keep text modest so names fit
   t *= k;
-  const artS = o.art ? Math.min(rowH * .8, 150 * boost) : 0;
+  let artS = o.art ? Math.min(rowH * .8, 150 * (tall ? boost : Math.min(boost, 1.25))) : 0;
+  // user's list-size setting, kept within what the row can physically hold
+  const capT = Math.max(t, tall ? rowH*.26 : (o.artist ? rowH*.44 : rowH*.6)), capA = Math.max(artS, rowH*.88);
+  const wantT = t * o.scale, wantA = artS * o.scale;
+  const limited = o.scale > 1 && (wantT > capT + .5 || wantA > capA + .5);
+  t = Math.max(18, Math.min(wantT, capT)); artS = Math.min(wantA, capA);
   const badge = o.rank === "badge", d = t * 1.45;
-  c.font = `700 ${t*1.1}px ${F.css}`;
+  c.font = `${F.b} ${t*1.1}px ${F.css}`;
   const rankW = Math.max(o.art ? 84 : 104, badge ? d + 18 : c.measureText("00").width + 22);
-  return {t, aSize:t*.72, artS, rankW, badge, d, tall};
+  return {t, aSize:t*.72, artS, rankW, badge, d, tall, limited};
 }
 function drawRow(c, o, F, th, m, r, rank, yTop, rowH, divider){
   const W = SIZES[o.size].w, cy = yTop + rowH/2, t = m.t;
@@ -279,10 +303,10 @@ function drawRow(c, o, F, th, m, r, rank, yTop, rowH, divider){
   c.textBaseline = "middle";
   if(m.badge){
     c.fillStyle = o.accent; c.beginPath(); c.arc(PAD + m.d/2, ty, m.d/2, 0, Math.PI*2); c.fill();
-    c.textAlign = "center"; c.fillStyle = onColor(o.accent); c.font = `700 ${t*.9}px ${F.css}`;
+    c.textAlign = "center"; c.fillStyle = onColor(o.accent); c.font = `${F.b} ${t*.9}px ${F.css}`;
     c.fillText(String(rank), PAD + m.d/2, ty + t*.03);
   } else {
-    c.textAlign = "left"; c.font = `700 ${t*1.1}px ${F.css}`; c.fillStyle = o.accent;
+    c.textAlign = "left"; c.font = `${F.b} ${t*1.1}px ${F.css}`; c.fillStyle = o.accent;
     c.fillText(String(rank), PAD, ty);
   }
   let cw = 0;
@@ -293,26 +317,26 @@ function drawRow(c, o, F, th, m, r, rank, yTop, rowH, divider){
       c.font = `400 ${t*.62}px ${F.css}`; c.fillStyle = th.sub;
       c.fillText(unit, W-PAD, ty + t*.04);
       const uw = c.measureText(unit).width;
-      c.font = `700 ${t*1.05}px ${F.css}`; c.fillStyle = th.text;
+      c.font = `${F.b} ${t*1.05}px ${F.css}`; c.fillStyle = th.text;
       c.fillText(ns, W-PAD-uw-12, ty);
       cw = uw + 12 + c.measureText(ns).width;
     } else {
       const s = fmtDur(r.ms);
-      c.font = `700 ${t}px ${F.css}`; c.fillStyle = th.text;
+      c.font = `${F.b} ${t}px ${F.css}`; c.fillStyle = th.text;
       c.fillText(s, W-PAD, ty); cw = c.measureText(s).width;
     }
   }
   if(o.art) drawArt(c, r, PAD + m.rankW, cy - m.artS/2, m.artS, o.shape);
   const x = PAD + m.rankW + (o.art ? m.artS + 24 : 0), maxW = W - PAD - x - cw - (cw ? 28 : 0);
-  c.textAlign = "left"; c.textBaseline = "middle"; c.font = `700 ${t}px ${F.css}`; c.fillStyle = th.text;
-  c.fillText(fit(c, r.name, maxW), x, ty);
+  c.textAlign = "left"; c.textBaseline = "middle"; c.font = `${F.b} ${t}px ${F.css}`; c.fillStyle = th.text;
+  c.fillText(fitShrink(c, r.name, maxW, t, F.b, F.css, .6), x, ty);
   if(o.artist){
-    c.font = `400 ${m.aSize}px ${F.css}`; c.fillStyle = th.sub;
+    c.fillStyle = th.sub;
     const ay = m.tall ? ty + nameH/2 + artH/2 : cy + t*.58;
-    c.fillText(fit(c, r.artist || "Unknown artist", W - PAD - x), x, ay);
+    c.fillText(fitShrink(c, r.artist || "Unknown artist", W - PAD - x, m.aSize, 400, F.css, .7), x, ay);
   }
   if(cntH){
-    c.font = `700 ${t*.8}px ${F.css}`; c.fillStyle = o.accent;
+    c.font = `${F.b} ${t*.8}px ${F.css}`; c.fillStyle = o.accent;
     c.fillText(countText(o, r), x, ty + nameH/2 + artH + cntH/2);
   }
   if(divider && o.dividers){
@@ -332,24 +356,29 @@ function drawHero(c, o, F, th, k, r, y0){
     drawArt(c, r, ax, ay, S, o.shape);
     c.textAlign = "center";
     let yy = ay + S + 24;
-    c.font = `700 ${66*k}px ${F.css}`; c.fillStyle = th.text;
-    c.fillText(fit(c, r.name, W - PAD*2), W/2, yy + 36); yy += 76;
-    if(o.artist){ c.font = `400 ${38*k}px ${F.css}`; c.fillStyle = th.sub; c.fillText(fit(c, r.artist || "Unknown artist", W - PAD*2), W/2, yy + 20); yy += 52; }
-    if(ct){ c.font = `700 ${46*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, W/2, yy + 24); }
+    c.fillStyle = th.text;
+    c.fillText(fitShrink(c, r.name, W - PAD*2, 66*k, F.b, F.css, .55), W/2, yy + 36); yy += 76;
+    if(o.artist){ c.fillStyle = th.sub; c.fillText(fitShrink(c, r.artist || "Unknown artist", W - PAD*2, 38*k, 400, F.css, .7), W/2, yy + 20); yy += 52; }
+    if(ct){ c.font = `${F.b} ${46*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, W/2, yy + 24); }
   } else {
     const ax = PAD, ay = y0;
     if(peek) drawVinyl(c, o, ax + S/2 + peek, ay + S/2, S/2);
     drawArt(c, r, ax, ay, S, o.shape);
     const x = ax + S + peek + 40, maxW = W - PAD - x;
-    c.textAlign = "left"; c.font = `700 ${54*k}px ${F.css}`;
-    const lines = wrapLines(c, r.name, maxW, 2);
-    const hh = 44 + lines.length * 62 + (o.artist ? 46 : 0) + (ct ? 60 : 0);
+    c.textAlign = "left";
+    let hs = 54 * k, lines;
+    for(;;){                                         // shrink until the name fits on two lines without cutting words
+      c.font = `${F.b} ${hs}px ${F.css}`; lines = wrapLines(c, r.name, maxW, 2);
+      if(!lines.some(l => l.endsWith("…")) || hs <= 54 * k * .6) break;
+      hs -= 2;
+    }
+    const lh = hs * 1.15, hh = 44 + lines.length * lh + (o.artist ? 46 : 0) + (ct ? 60 : 0);
     let yy = ay + (S - hh) / 2;
-    c.font = `700 ${34*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText("#1", x, yy + 17); yy += 44;
-    c.font = `700 ${54*k}px ${F.css}`; c.fillStyle = th.text;
-    for(const l of lines){ c.fillText(l, x, yy + 31); yy += 62; }
-    if(o.artist){ c.font = `400 ${34*k}px ${F.css}`; c.fillStyle = th.sub; c.fillText(fit(c, r.artist || "Unknown artist", maxW), x, yy + 23); yy += 46; }
-    if(ct){ c.font = `700 ${42*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, x, yy + 30); }
+    c.font = `${F.b} ${34*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText("#1", x, yy + 17); yy += 44;
+    c.font = `${F.b} ${hs}px ${F.css}`; c.fillStyle = th.text;
+    for(const l of lines){ c.fillText(l, x, yy + lh/2); yy += lh; }
+    if(o.artist){ c.fillStyle = th.sub; c.fillText(fitShrink(c, r.artist || "Unknown artist", maxW, 34*k, 400, F.css, .7), x, yy + 23); yy += 46; }
+    if(ct){ c.font = `${F.b} ${42*k}px ${F.css}`; c.fillStyle = o.accent; c.fillText(ct, x, yy + 30); }
   }
 }
 
@@ -374,16 +403,16 @@ function drawCard(cv, o, rows){
   // header
   c.textBaseline = "alphabetic"; c.textAlign = "left";
   let ts = 78 * k;
-  c.font = `700 ${ts}px ${F.css}`;
+  c.font = `${F.b} ${ts}px ${F.css}`;
   const tMax = W - PAD*2 - 120;
-  while(ts > 40 && c.measureText(o.title).width > tMax){ ts -= 2; c.font = `700 ${ts}px ${F.css}`; }
+  while(ts > 34 && c.measureText(o.title).width > tMax){ ts -= 2; c.font = `${F.b} ${ts}px ${F.css}`; }
   c.fillStyle = th.text; c.fillText(fit(c, o.title, tMax), PAD, PAD + 70);
-  c.font = `400 ${34*k}px ${F.css}`; c.fillStyle = th.sub;
-  c.fillText(fit(c, o.subtitle, W - PAD*2), PAD, PAD + 70 + 50);
+  c.fillStyle = th.sub;
+  c.fillText(fitShrink(c, o.subtitle, W - PAD*2, 34*k, 400, F.css, .7), PAD, PAD + 70 + 50);
 
   if(o.footer){
-    c.textAlign = "center"; c.textBaseline = "middle"; c.font = `400 ${28*k}px ${F.css}`; c.fillStyle = th.sub;
-    c.fillText(fit(c, o.footer, W - PAD*2), W/2, H - PAD/2 - 4);
+    c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = th.sub;
+    c.fillText(fitShrink(c, o.footer, W - PAD*2, 28*k, 400, F.css, .7), W/2, H - PAD/2 - 4);
   }
 
   const list = rows.slice(0, o.n);
@@ -399,11 +428,13 @@ function drawCard(cv, o, rows){
     const rest = list.slice(1), top = LIST_TOP + spotGeo(o.size).heroH, area = bottom - top;
     if(rest.length){
       const rowH = Math.min(area / rest.length, 190), m = rowMetrics(c, o, F, k, rowH);
+      Card.limited = m.limited;
       rest.forEach((r, i) => drawRow(c, o, F, th, m, r, i + 2, top + i*rowH, rowH, i < rest.length - 1));
     }
   } else {
     const rowH = Math.min(avail / list.length, 340), y0 = bottom - rowH * list.length;
     const m = rowMetrics(c, o, F, k, rowH);
+    Card.limited = m.limited;
     list.forEach((r, i) => drawRow(c, o, F, th, m, r, i + 1, y0 + i*rowH, rowH, i < list.length - 1));
   }
   cv.setAttribute("aria-label", `${o.title}. ${o.subtitle}. ` + list.map((r,i)=>`${i+1}, ${r.name}${r.artist ? " by " + r.artist : ""}`).join("; "));
@@ -413,9 +444,12 @@ let tok = 0, raf = 0;
 async function render(){
   const my = ++tok, o = getOpts(), F = FONTS[o.font];
   $("subtitle").placeholder = Card.getSubtitle();
-  try{ await Promise.all([document.fonts.load(`700 40px "${F.fam}"`), document.fonts.load(`400 40px "${F.fam}"`)]); }catch(e){}
+  try{ await Promise.all([document.fonts.load(`${F.b} 40px "${F.fam}"`), document.fonts.load(`400 40px "${F.fam}"`)]); }catch(e){}
   if(my !== tok) return;
+  Card.limited = false;
   drawCard($("card"), o, Card.rows);
+  $("scaleOut").textContent = Math.round(o.scale * 100) + "%";
+  $("sizeNote").textContent = Card.limited ? "That’s as big as this many entries allow. Choose fewer entries to go bigger." : "";
 }
 Card.schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); };
 
@@ -477,6 +511,23 @@ function buildThemes(){
   }
 }
 
+function confetti(){
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const btn = $("save"); if(!btn || !btn.animate) return;
+  const r = btn.getBoundingClientRect(), colors = ["#ff5c8a","#ffd23f","#3ddbb0","#5b3df5","#ffffff"];
+  for(let i = 0; i < 26; i++){
+    const p = document.createElement("span"), size = 6 + Math.random()*7;
+    Object.assign(p.style, {position:"fixed", left:(r.left + r.width/2) + "px", top:(r.top + r.height/2) + "px", width:size + "px",
+      height:size*(Math.random() < .5 ? 1 : .45) + "px", background:colors[i % colors.length], borderRadius:Math.random() < .4 ? "50%" : "2px",
+      pointerEvents:"none", zIndex:9999});
+    document.body.appendChild(p);
+    const ang = Math.random()*Math.PI*2, dist = 90 + Math.random()*170, dx = Math.cos(ang)*dist, dy = Math.sin(ang)*dist - 70;
+    p.animate([{transform:"translate(0,0) rotate(0deg)", opacity:1},
+               {transform:`translate(${dx}px,${dy + 130}px) rotate(${Math.random()*720}deg)`, opacity:0}],
+              {duration:900 + Math.random()*500, easing:"cubic-bezier(.2,.7,.3,1)"}).onfinish = () => p.remove();
+  }
+}
+
 async function saveImage(){
   const msg = $("saveMsg"); msg.textContent = "";
   await render();
@@ -486,21 +537,21 @@ async function saveImage(){
   let DL = null;                                   // used when the page runs inside Claude
   try{ DL = window.claude && window.claude.use ? await window.claude.use("downloads") : null; }catch(e){ DL = null; }
   if(DL){
-    try{ await DL.save({filename:name, data:blob}); msg.textContent = "Saved."; }
+    try{ await DL.save({filename:name, data:blob}); msg.textContent = "Saved."; confetti(); }
     catch(e){ if(!e || e.code !== "declined") msg.textContent = "Saving didn’t work here. Take a screenshot of the image instead."; }
     return;
   }
   const file = new File([blob], name, {type:"image/png"});
   const touch = window.matchMedia && matchMedia("(pointer:coarse)").matches;
   if(touch && navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file]}); return; }
+    try{ await navigator.share({files:[file]}); confetti(); return; }
     catch(e){ if(e && e.name === "AbortError") return; }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
-  msg.textContent = "Saved to your downloads.";
+  msg.textContent = "Saved to your downloads."; confetti();
 }
 
 Card.setNote = text => { const n = $("artNote"); if(n) n.textContent = text || ""; };
@@ -510,6 +561,7 @@ Card.visibleCount = () => +($("count") && $("count").value) || 10;
 Card.mount = function(container){
   container.insertAdjacentHTML("beforeend", HTML);
   buildChoice($("fonts"), Object.keys(FONTS).map(k => [k, FONTS[k].label]), "font");
+  [...$("fonts").children].forEach(b => { b.style.fontFamily = FONTS[b.dataset.id].css; });
   buildChoice($("sizes"), Object.keys(SIZES).map(k => [k, SIZES[k].label]), "size");
   buildThemes();
   buildChoice($("bgs"), Object.entries(BGS), "bg");
@@ -522,7 +574,7 @@ Card.mount = function(container){
   $("flat").value = THEMES[st.theme].bg[0];
   syncFlat();
   refreshCountOptions();
-  for(const id of ["title","subtitle","footer","accent","flat","count","showCounts","showArt","dividers"]) $(id).addEventListener("input", Card.schedule);
+  for(const id of ["title","subtitle","footer","accent","flat","count","showCounts","showArt","dividers","scale"]) $(id).addEventListener("input", Card.schedule);
   $("showArtist").onchange = () => { refreshCountOptions(); Card.schedule(); };
   $("save").onclick = saveImage;
   Card.schedule();

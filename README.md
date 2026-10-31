@@ -37,7 +37,7 @@ Spotify has tightened its rules in 2026. Check the current limits in the [quota 
 
 ## Making it yours
 
-The Customize panel on both pages controls the look of the image: three shapes (Square, Portrait, Story), a list or **#1 spotlight** arrangement, 12 color themes plus your own accent and flat color, eight textures, an optional frame, cover art shape, plain or badge rank numbers, three fonts, and an optional footer line for your handle. In Story shape, the spotlight puts your number one front and center, with a record peeking out behind it when the Record grooves texture is on.
+The Customize panel on both pages controls the look of the image: three shapes (Square, Portrait, Story), a list or **#1 spotlight** arrangement, 12 color themes plus your own accent and flat color, eight textures, an optional frame, cover art shape, plain or badge rank numbers, nine fonts, a list-size slider, and an optional footer line for your handle. In Story shape, the spotlight puts your number one front and center, with a record peeking out behind it when the Record grooves texture is on.
 
 ## Cover art
 
