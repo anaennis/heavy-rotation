@@ -272,11 +272,11 @@ function rowMetrics(c, o, F, k, rowH){
   const boost = Math.min(1.5, Math.max(1, rowH / 170));
   let t = o.artist ? Math.min(Math.max(rowH*.36, 34), 54) : Math.min(Math.max(rowH*.46, 34), 58);
   t *= boost;
-  if(o.art) t = Math.min(t, 48 * boost);
   const tall = rowH >= 230 && o.counts;
-  if(tall) t = Math.min(t, 60);                       // keep names readable and untruncated in Story
+  if(tall) t = Math.min(t, 60);                       // stacked rows have the full width, so names stay readable
+  else if(o.art) t = Math.min(t, 48 * Math.min(boost, 1.15));   // beside bigger covers, keep text modest so names fit
   t *= k;
-  const artS = o.art ? Math.min(rowH * .8, 150 * boost) : 0;
+  const artS = o.art ? Math.min(rowH * .8, 150 * (tall ? boost : Math.min(boost, 1.25))) : 0;
   const badge = o.rank === "badge", d = t * 1.45;
   c.font = `700 ${t*1.1}px ${F.css}`;
   const rankW = Math.max(o.art ? 84 : 104, badge ? d + 18 : c.measureText("00").width + 22);
